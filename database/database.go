@@ -2,7 +2,7 @@
 // -*- mode: go; coding: utf-8; -*-
 // Created on 31. 03. 2025 by Benjamin Walkenhorst
 // (c) 2025 Benjamin Walkenhorst
-// Time-stamp: <2025-03-31 18:29:08 krylon>
+// Time-stamp: <2025-03-31 19:18:42 krylon>
 
 // Package database provides the persistence layer for the application.
 package database
@@ -20,7 +20,9 @@ import (
 
 	"github.com/blicero/krylib"
 	"github.com/blicero/zappelwurst/common"
+	"github.com/blicero/zappelwurst/database/query"
 	"github.com/blicero/zappelwurst/logdomain"
+	"github.com/blicero/zappelwurst/model"
 	_ "github.com/mattn/go-sqlite3" // Import the database driver
 )
 
@@ -549,3 +551,58 @@ func (db *Database) Commit() error {
 	db.tx = nil
 	return nil
 } // func (db *Database) Commit() error
+
+// HostAdd registers a Host in the database.
+func (db *Database) HostAdd(h *model.Host) error {
+	const qid query.ID = query.HostAdd
+	var (
+		err  error
+		msg  string
+		stmt *sql.Stmt
+	)
+
+	if stmt, err = db.getQuery(qid); err != nil {
+		db.log.Printf("[ERROR] Cannot prepare query %s: %s\n",
+			qid,
+			err.Error())
+		return err
+	} else if db.tx != nil {
+		stmt = db.tx.Stmt(stmt)
+	}
+
+	var rows *sql.Rows
+
+EXEC_QUERY:
+	if rows, err = stmt.Query(h.Name, h.OS); err != nil {
+		if worthARetry(err) {
+			waitForRetry()
+			goto EXEC_QUERY
+		} else {
+			err = fmt.Errorf("Cannot add Host %s to database: %s",
+				h.Name,
+				err.Error())
+			db.log.Printf("[ERROR] %s\n", err.Error())
+			return err
+		}
+	} else {
+		var id int64
+
+		defer rows.Close()
+
+		if !rows.Next() {
+			// CANTHAPPEN
+			db.log.Printf("[ERROR] Query %s did not return a value\n",
+				qid)
+			return fmt.Errorf("Query %s did not return a value", qid)
+		} else if err = rows.Scan(&id); err != nil {
+			msg = fmt.Sprintf("Failed to get ID for newly added Host %s: %s",
+				h.Name,
+				err.Error())
+			db.log.Printf("[ERROR] %s\n", msg)
+			return errors.New(msg)
+		}
+
+		h.ID = id
+		return nil
+	}
+} // func (db *Database) HostAdd(h *model.Host) error

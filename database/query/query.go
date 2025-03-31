@@ -2,7 +2,7 @@
 // -*- mode: go; coding: utf-8; -*-
 // Created on 31. 03. 2025 by Benjamin Walkenhorst
 // (c) 2025 Benjamin Walkenhorst
-// Time-stamp: <2025-03-31 18:40:04 krylon>
+// Time-stamp: <2025-03-31 18:42:30 krylon>
 
 // Package query provides symbolic constants to refer to database queries.
 package query
@@ -18,4 +18,11 @@ const (
 	HostDelete
 	HostGetByID
 	HostGetAll
+	ReportAdd
+	ReportDelete
+	ReportDeleteByHost
+	ReportGetByHost
+	ReportGetByPeriod
+	ReportGetByID
+	ReportGetMulti
 )
